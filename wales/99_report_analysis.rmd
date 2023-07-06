@@ -1,0 +1,319 @@
+---
+title  : "Risk of severe COVID-19 outcomers for those who recieved a COVID-19 autumn 2022 vaccination"
+date   : "Date compiled: `r format(Sys.time(), '%a %d %B %Y')`"
+author : "[Stuart Bedston](mailto:stuart.bedston@swansea.ac.uk)"
+---
+
+```{r setup, include=FALSE}
+
+source("r_clear_workspace.r")
+
+options(
+	knitr.kable.NA = ''
+)
+
+knitr::opts_chunk$set(
+	fig.width  = 8,
+	fig.height = 8,
+	fig.align = "center",
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+
+```
+
+## 0. Message to SAIL reviewers
+
+The HTML report describes the research aim and study design, lists the data
+sources used, the suppression applied to each table and figure, as well as
+the context for the other files requested out.
+
+Counts between 1 and 9 are considered "small".
+
+For figures, all small counts have been replaced with 10, and all other counts
+rounded to nearest 10.
+
+For descriptive tables, small counts have been omitted, along with their related
+stats. All other counts are rounded to nearest 10.
+
+
+## 1. Research aim
+
+Identify demographic and health characteristics associated with risk of
+COVID-19 hospitalisation or death amongst those receiving a COVID-19 vaccination
+as part of the autumn 2022 programme.
+
+## 2. Study design
+
+Prospective observational study on a national cohort of those alive and
+living in Wales from September 2022, who had received a COVID-19 autumn 2022
+vaccination.
+
+Analytical approach is to model time until COVID-19 hosp/death using Cox
+regression.
+
+### Data sources
+
+- **C19_COHORT20**:
+	- **WDSD**: Welsh Demographic Service Dataset
+	- **WLGP**: Welsh Longitudinal General Practice data
+- **C19_COHORT_MORTALITY**:
+	- **ADDE**: Annual District Death Extract
+	- **CDDS**: COVID-19 Consolidated Deaths Data Set
+	- **WDSD**: Welsh Demographic Service Dataset
+- **(RRDA_)CVVD**: COVID-19 vaccination records from the Welsh Immunisation System
+- **PEDW**: Patient Episode Dataset for Wales
+- **WDSD**: Welsh Demographic Service Dataset
+- **WLGP**: Welsh Longitudinal General Practice data
+- **CENW**: ONS census for Wales
+
+## 2. Data extraction / prep
+
+### Figure: Weekly vaccinations by dose num and name
+
+- Counts between 1 and 9 replaced with 10, all other counts rounded to nearest 10
+
+```{r, fig.height = 6}
+p_vacc_desc <- qread("results/p_prep_vacc_desc.qs")
+p_vacc_desc
+```
+
+### Figure: Weekly coverage of current data extract of hospital admissions
+
+- Counts counts rounded to nearest 10
+
+```{r, fig.height = 6}
+p_hosp_coverage <- qread("results/p_prep_hosp_coverage.qs")
+p_hosp_coverage
+```
+
+### Figure: Weekly hospital admissions broken down by COVID-19 status
+
+- Counts between 1 and 9 replaced with 10, all other counts rounded to nearest 10
+
+```{r, fig.height = 12}
+p_hosp <- qread("results/p_prep_hosp.qs")
+p_hosp
+```
+
+## 3. Exploratory analysis
+
+```{r}
+qload("results/explore_vacc.qsm")
+qload("results/explore_c19_hosp_death.qsm")
+```
+
+### Figure: Cumulative incidence of vaccinations
+
+- Suppression not applicable
+
+```{r, fig.height = 7}
+p_vacc_state
+```
+
+### Figure: COVID-19 combined hosp and death counts per week
+
+- Counts stratified by for those aged 18-64 and 65+, and whether they were up
+  up to day 14 post vaccination, if they had recieved an autumn 22 vaccination
+- Counts below 10 have been omitted, all other counts rounded to nearest 10
+
+```{r, fig.height = 6}
+p_c19_hosp_death_week
+```
+
+### Table: Total COVID-19 hosp/death counts by age
+
+- Counts between 1 and 9 have been removed, all other counts rounded to nearest 10
+
+```{r}
+bind_rows(t_c19_hosp_death_n, .id = "outcome") %>%
+mutate(across(where(is.numeric), suppress_n)) %>%
+kable(
+	align = c("l", "r", "r"),
+	format.args = list(big.mark = ",")
+) %>%
+kable_pretty()
+```
+
+## 4. Sample selection
+
+### Table: Sample selection
+
+- Counts rounded to nearest 10
+
+```{r}
+qread("results/t_sample_selection.qs") %>%
+mutate(
+	n = suppress_n(n),
+	n_diff = suppress_n(n_diff)
+) %>%
+kable(
+	align = c("r", "l", "r", "r", "r"),
+	format.args = list(big.mark = ",")
+) %>%
+kable_pretty()
+```
+
+## 5. Main analysis of severe COVID-19 outcomes
+
+```{r}
+qload("results/analyse_hosp_death_main.qsm")
+```
+
+### Table: Sample descriptives, counts and rates of severe COVID-19 outcome
+
+- Counts between 1 and 9, excluded, along with derived columns, such as percentage or rate
+- All other counts rounded to nearest 10
+- Percentages and rates are reported to 1 decimal place
+- The table below is also saved as:
+	+ `t_hosp_death_overall_npr.csv`
+- Also suppressed and saved are the sample descriptives for the MD and PB specific subsets:
+	+ `t_hosp_death_md_npr.csv`
+	+ `t_hosp_death_pb_npr.csv`
+
+```{r}
+
+t_hosp_death_overall_npr <-
+	hosp_death_overall_npr %>%
+	mutate(
+		total_n = suppress_n(total_n),
+		total_p = if_else(is.na(total_n), NA_real_, round_half_up(total_p, 1)),
+		pyears  = suppress_n(pyears),
+		events  = suppress_n(events),
+		rate    = if_else(is.na(events), NA_real_, round_half_up(rate, 1))
+	)
+
+t_hosp_death_overall_npr %>%
+kable(
+	format.args = list(big.mark = ",")
+) %>%
+kable_pretty()
+
+write_csv(
+	t_hosp_death_overall_npr,
+	file = "request-out/t_hosp_death_overall_npr.csv"
+)
+
+# output the two MD and PB subsets
+
+t_hosp_death_md_npr <-
+	hosp_death_md_npr %>%
+	mutate(
+		total_n = suppress_n(total_n),
+		total_p = if_else(is.na(total_n), NA_real_, round_half_up(total_p, 1)),
+		pyears  = suppress_n(pyears),
+		events  = suppress_n(events),
+		rate    = if_else(is.na(events), NA_real_, round_half_up(rate, 1))
+	)
+
+write_csv(
+	t_hosp_death_md_npr,
+	file = "request-out/t_hosp_death_md_npr.csv"
+)
+
+t_hosp_death_pb_npr <-
+	hosp_death_pb_npr %>%
+	mutate(
+		total_n = suppress_n(total_n),
+		total_p = if_else(is.na(total_n), NA_real_, round_half_up(total_p, 1)),
+		pyears  = suppress_n(pyears),
+		events  = suppress_n(events),
+		rate    = if_else(is.na(events), NA_real_, round_half_up(rate, 1))
+	)
+
+write_csv(
+	t_hosp_death_pb_npr,
+	file = "request-out/t_hosp_death_pb_npr.csv"
+)
+
+```
+
+
+### Figure: Hazard ratios of severe COVID-19 outcome
+
+- Suppression not applicable
+- Adjusted coef for overall, MD-and PB-specific analyses are saved as:
+	+ `m_hosp_death_overall_coef_adj.csv`
+	+ `m_hosp_death_md_coef_adj.csv`
+	+ `m_hosp_death_pb_coef_adj.csv`
+- Respective variance-covariance matrices are saved as:
+	+ `m_hosp_death_overall_vcov_adj.csv`
+	+ `m_hosp_death_md_vcov_adj.csv`
+	+ `m_hosp_death_pb_vcov_adj.csv`
+
+
+```{r, fig.height = 10}
+p_hosp_death_coef
+
+# coefs
+write_csv(hosp_death_overall_coef_adj, file = "request-out/m_hosp_death_overall_coef_adj.csv")
+write_csv(hosp_death_md_coef_adj,      file = "request-out/m_hosp_death_md_coef_adj.csv")
+write_csv(hosp_death_pb_coef_adj,      file = "request-out/m_hosp_death_pb_coef_adj.csv")
+
+# variance-covariance
+hosp_death_overall_vcov_adj %>%
+as_tibble() %>%
+write_csv(file = "request-out/m_hosp_death_overall_vcov_adj.csv")
+
+hosp_death_md_vcov_adj %>%
+as_tibble() %>%
+write_csv(file = "request-out/m_hosp_death_md_vcov_adj.csv")
+
+hosp_death_pb_vcov_adj %>%
+as_tibble() %>%
+write_csv(file = "request-out/m_hosp_death_pb_vcov_adj.csv")
+```
+
+## 6. Analysis of severe COVID-19 outcomes for QCovid clinical indicators
+
+```{r}
+qload("results/analyse_hosp_death_qcovid.qsm")
+```
+
+### Table: Sample counts and rates of severe COVID-19 outcome
+
+- Counts between 1 and 9 have been excluded, along with derived columns, such as percentage and rate
+- All other counts rounded to nearest 10
+- Percentages and rates are reported to 1 decimal place
+- Saved as `t_hosp_death_qcovid_npr.csv`
+
+```{r}
+t_hosp_death_qcovid_npr <-
+	hosp_death_qcovid_npr %>%
+	mutate(
+		total_n = suppress_n(total_n),
+		total_p = if_else(is.na(total_n), NA_real_, round_half_up(total_p, 1)),
+		pyears  = if_else(is.na(total_n), NA_real_, round_half_up(pyears, 1)),
+		events  = if_else(is.na(total_n), NA_real_, suppress_n(events)),
+		rate    = if_else(is.na(events),  NA_real_, round_half_up(rate, 1))
+	)
+
+t_hosp_death_qcovid_npr %>%
+kable(
+	format.args = list(big.mark = ",")
+) %>%
+kable_pretty()
+
+write_csv(
+	t_hosp_death_qcovid_npr,
+	file = "request-out/t_hosp_death_qcovid_npr.csv"
+)
+```
+
+### Figure: Hazard ratios of severe COVID-19 outcome
+
+- Results suppressed for covariates with a prevalence count of less than 10
+  (total N from the previous table)
+- Saved as `m_hosp_death_qcovid_coef_adj.csv`
+
+```{r, fig.height = 10}
+p_hosp_death_qcovid_coef
+
+d_hosp_death_qcovid_coef %>%
+filter(est_type == "adj") %>%
+select(-est_type) %>%
+write_csv(
+	file = "request-out/m_hosp_death_qcovid_coef_adj.csv"
+)
+```
