@@ -1,0 +1,133 @@
+---
+title: "NCSi-2 Winter 2022/23 COVID-19 vaccination breakthrough: Meta-analysis"
+date: "Date compiled: `r format(Sys.time(), '%a %d %B')`"
+---
+
+```{r setup, include=FALSE}
+source("clear_workspace.r")
+
+knitr::opts_chunk$set(
+  cache      = FALSE,
+  fig.width  = 8,
+  fig.height = 8,
+  fig.align  = "center",
+  echo       = FALSE,
+  message    = FALSE,
+  warning    = FALSE
+)
+```
+
+<style>
+.table-hover > tbody > tr:hover { 
+  background-color: #fdf7e2;
+}
+</style>
+
+
+# Main analysis
+
+- Wales and NI: Suppressed counts between 1 and 9, replaced with a value of 1
+- Fully adjusted estimates from all nations
+- Combined using fixed-effects meta analysis
+
+### Table: Nation counts and rates
+
+```{r}
+t_main_desc_all <- read_xlsx("meta_analysis_results/strict_main_t_desc_all.xlsx")
+
+t_main_desc_all %>% 
+kable() %>% 
+kable_styling(
+  bootstrap   = c("striped", "condensed", "hover"),
+  full_width  = FALSE,
+  fixed_thead = TRUE
+)
+```
+
+
+### Table: Pooled descriptive counts and rates
+
+```{r}
+read_xlsx("meta_analysis_results/strxlsx") %>% 
+kable(
+  align = c("l", "l", "r", "r", "r", "r", "r", "r")
+) %>% 
+kable_styling(
+  bootstrap = c("striped", "condensed", "hover"),
+  full_width = FALSE,
+  fixed_thead = TRUE
+)
+```
+
+
+### Figure: Nation and meta hazard ratios
+
+```{r, fig.height = 15}
+qread("meta results/p_main_all_coef.qs")
+
+
+
+```
+
+### Figure: Meta hazard ratios
+
+```{r, fig.height = 8}
+qread("meta results/p_main_meta_coef.qs")
+```
+
+# Specific QCovid conditions
+
+- Wales: Suppressed counts between 1 and 9, replaced with a value of 1
+- Model spec includes:
+  - Time post vaccination
+  - Previous vaccination
+  - Demographics: sex, age, household size, area deprivation, urban/rural
+  - i.e. not adjusted for other health conditions
+- Combined using fixed-effects meta analysis
+
+### Table: Nation counts and rates
+
+```{r}
+t_qcovid_desc_all <- read_xlsx("meta results/t_qcovid_descriptive_pool_check.xlsx")
+
+t_qcovid_desc_all %>% 
+kable() %>% 
+kable_styling(
+  bootstrap   = c("striped", "condensed", "hover"),
+  full_width  = FALSE,
+  fixed_thead = TRUE
+) %>% 
+column_spec(column =  4, background = ifelse(is.na(t_qcovid_desc_all$n_scotland), "orange", "")) %>% 
+column_spec(column =  5, background = ifelse(is.na(t_qcovid_desc_all$n_wales),    "orange", "")) %>% 
+column_spec(column =  7, background = ifelse(is.na(t_qcovid_desc_all$e_scotland), "orange", "")) %>% 
+column_spec(column =  8, background = ifelse(is.na(t_qcovid_desc_all$e_wales),    "orange", "")) %>%
+column_spec(column =  8, background = ifelse(t_qcovid_desc_all$e_wales == 1,      "yellow", ""))
+```
+
+
+### Table: Pooled descriptive counts and rates
+
+```{r}
+read_xlsx("meta results/t_qcovid_descriptive_pool_pretty.xlsx") %>% 
+select(-xvar) %>% 
+kable(
+  align = c("l", "r", "r")
+) %>% 
+kable_styling(
+  bootstrap = c("striped", "condensed", "hover"),
+  full_width = FALSE,
+  fixed_thead = TRUE
+)
+```
+
+### Figure: Nation and meta hazard ratios
+
+```{r, fig.height = 10}
+qread("meta results/p_qcovid_all_coef.qs")
+```
+
+### Figure: Meta hazard ratios
+
+```{r, fig.height = 6}
+qread("meta results/p_qcovid_meta_coef.qs")
+```
