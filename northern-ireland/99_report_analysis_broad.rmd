@@ -1,0 +1,153 @@
+---
+title  : "Risk of severe COVID-19 outcomers for those who recieved a COVID-19 autumn 2022 vaccination"
+date   : "Date compiled: `r format(Sys.time(), '%a %d %B %Y')`"
+author : "[Stuart Bedston](mailto:stuart.bedston@swansea.ac.uk)"
+---
+
+```{r setup, include=FALSE}
+
+source("r_clear_workspace.r")
+
+options(
+	knitr.kable.NA = ''
+)
+
+knitr::opts_chunk$set(
+	fig.width  = 8,
+	fig.height = 8,
+	fig.align = "center",
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+
+```
+
+## 1. Sample selection
+
+### Table: Sample selection
+
+- Counts rounded to nearest 10
+
+```{r}
+qread("../results/t_sample_selection_broad.qs") %>%
+mutate(
+	n = suppress_n(n),
+	n_diff = suppress_n(n_diff)
+) %>%
+kable(
+	align = c("r", "l", "r", "r", "r"),
+	format.args = list(big.mark = ",")
+) %>%
+kable_pretty()
+```
+
+## 2. Main analysis of severe COVID-19 outcomes
+
+```{r}
+qload("../results/analyse_hosp_death_main_broad.qsm")
+```
+
+### Table: Sample descriptives, counts and rates of severe COVID-19 outcome
+
+- Counts between 1 and 9, excluded, along with derived columns, such as percentage or rate
+- All other counts rounded to nearest 10
+- Percentages and rates are reported to 1 decimal place
+- The table below is also saved as:
+	+ `t_hosp_death_overall_npr.csv`
+- Also suppressed and saved are the sample descriptives for the MD and PB specific subsets:
+	+ `t_hosp_death_md_npr.csv`
+	+ `t_hosp_death_pb_npr.csv`
+
+```{r}
+
+t_hosp_death_overall_npr <-
+	hosp_death_overall_npr %>%
+	mutate(
+		total_n = suppress_n(total_n),
+		total_p = if_else(is.na(total_n), NA_real_, round_half_up(total_p, 1)),
+		pyears  = suppress_n(pyears),
+		events  = suppress_n(events),
+		rate    = if_else(is.na(events), NA_real_, round_half_up(rate, 1))
+	)
+
+t_hosp_death_overall_npr %>%
+kable(
+	format.args = list(big.mark = ",")
+) %>%
+kable_pretty()
+
+write_csv(
+	t_hosp_death_overall_npr,
+	file = "../results/broad/t_hosp_death_overall_npr.csv"
+)
+
+# output the two MD and PB subsets
+
+t_hosp_death_md_npr <-
+	hosp_death_md_npr %>%
+	mutate(
+		total_n = suppress_n(total_n),
+		total_p = if_else(is.na(total_n), NA_real_, round_half_up(total_p, 1)),
+		pyears  = suppress_n(pyears),
+		events  = suppress_n(events),
+		rate    = if_else(is.na(events), NA_real_, round_half_up(rate, 1))
+	)
+
+write_csv(
+	t_hosp_death_md_npr,
+	file = "../results/broad/t_hosp_death_md_npr.csv"
+)
+
+t_hosp_death_pb_npr <-
+	hosp_death_pb_npr %>%
+	mutate(
+		total_n = suppress_n(total_n),
+		total_p = if_else(is.na(total_n), NA_real_, round_half_up(total_p, 1)),
+		pyears  = suppress_n(pyears),
+		events  = suppress_n(events),
+		rate    = if_else(is.na(events), NA_real_, round_half_up(rate, 1))
+	)
+
+write_csv(
+	t_hosp_death_pb_npr,
+	file = "../results/broad/t_hosp_death_pb_npr.csv"
+)
+
+```
+
+
+### Figure: Hazard ratios of severe COVID-19 outcome
+
+- Suppression not applicable
+- Adjusted coef for overall, MD-and PB-specific analyses are saved as:
+	+ `m_hosp_death_overall_coef_adj.csv`
+	+ `m_hosp_death_md_coef_adj.csv`
+	+ `m_hosp_death_pb_coef_adj.csv`
+- Respective variance-covariance matrices are saved as:
+	+ `m_hosp_death_overall_vcov_adj.csv`
+	+ `m_hosp_death_md_vcov_adj.csv`
+	+ `m_hosp_death_pb_vcov_adj.csv`
+
+
+```{r, fig.height = 10}
+p_hosp_death_coef
+
+# coefs
+write_csv(hosp_death_overall_coef_adj, file = "../results/broad/m_hosp_death_overall_coef_adj.csv")
+write_csv(hosp_death_md_coef_adj,      file = "../results/broad/m_hosp_death_md_coef_adj.csv")
+write_csv(hosp_death_pb_coef_adj,      file = "../results/broad/m_hosp_death_pb_coef_adj.csv")
+
+# variance-covariance
+hosp_death_overall_vcov_adj %>%
+as_tibble() %>%
+write_csv(file = "../results/broad/m_hosp_death_overall_vcov_adj.csv")
+
+hosp_death_md_vcov_adj %>%
+as_tibble() %>%
+write_csv(file = "../results/broad/m_hosp_death_md_vcov_adj.csv")
+
+hosp_death_pb_vcov_adj %>%
+as_tibble() %>%
+write_csv(file = "../results/broad/m_hosp_death_pb_vcov_adj.csv")
+```
